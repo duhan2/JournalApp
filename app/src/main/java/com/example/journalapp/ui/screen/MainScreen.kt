@@ -11,15 +11,19 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Create
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -33,6 +37,7 @@ import java.util.Locale
 fun MainScreen(viewModel: JournalEntryViewModel) {
 
     val entries by viewModel.entries.collectAsState(emptyList())
+    val openAlertDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -44,6 +49,7 @@ fun MainScreen(viewModel: JournalEntryViewModel) {
                 shape = CircleShape,
                 onClick = {
                     Toast.makeText(context, "Clicked", Toast.LENGTH_SHORT).show()
+                    viewModel.insert(JournalEntry(title = "Erster", content = "Erster Eintrag"))
                 },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
@@ -64,11 +70,11 @@ fun MainScreen(viewModel: JournalEntryViewModel) {
     }
 }
 
-
 @Composable
 fun JournalEntryItem(entry: JournalEntry) {
     Card(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = entry.title, style = MaterialTheme.typography.titleMedium)
@@ -81,4 +87,34 @@ fun JournalEntryItem(entry: JournalEntry) {
             Text(text = entry.content, style = MaterialTheme.typography.bodyMedium)
         }
     }
+}
+
+@Composable
+fun EntryAlertDialog(
+    onDismissRequest: () -> Unit,
+    onConfirmation: () -> Unit
+) {
+    AlertDialog(
+        title = { Text(text = "Eintrag Löschen ?") },
+        text = { Text(text = "Sicher, dass Sie den Eintrag löschen wollen ?") },
+        onDismissRequest = { onDismissRequest() },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onConfirmation()
+                }
+            ) {
+                Text("Bestätigen")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = {
+                    onDismissRequest()
+                }
+            ) {
+                Text("Abbrechen")
+            }
+        }
+    )
 }
