@@ -58,7 +58,6 @@ fun MainScreen(viewModel: JournalEntryViewModel, onNavigateToEditor: (Int) -> Un
             FloatingActionButton(
                 shape = CircleShape,
                 onClick = {
-                    Toast.makeText(context, "Clicked", Toast.LENGTH_SHORT).show()
                     scope.launch {
                         val id = viewModel.createDraft()
                         onNavigateToEditor(id)
