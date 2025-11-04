@@ -10,8 +10,12 @@ class JournalEntryRepository(private val journalEntryDao: JournalEntryDao) {
         return journalEntryDao.getEntry(id = id)
     }
 
-    suspend fun insert(journalEntry: JournalEntry) {
-        journalEntryDao.insert(journalEntry)
+    suspend fun insert(journalEntry: JournalEntry): Int {
+        return journalEntryDao.insert(journalEntry).toInt()
+    }
+    //Erschaffe leeren Eintrag
+    suspend fun createDraft(): Int {
+        return insert(JournalEntry(title = "", content = ""))
     }
 
     suspend fun update(journalEntry: JournalEntry) {

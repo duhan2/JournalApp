@@ -15,10 +15,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -26,12 +28,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.journalapp.data.JournalEntry
 import com.example.journalapp.data.JournalEntryViewModel
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -43,43 +47,54 @@ fun MainScreen(viewModel: JournalEntryViewModel, onNavigateToEditor: (Int) -> Un
 
     var chosenEntry by remember { mutableStateOf<JournalEntry?>(null) }
 
+    val scope = rememberCoroutineScope()
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface,
+        containerColor = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
         floatingActionButton = {
             val context = LocalContext.current
             FloatingActionButton(
                 shape = CircleShape,
                 onClick = {
                     Toast.makeText(context, "Clicked", Toast.LENGTH_SHORT).show()
-                    viewModel.insert(JournalEntry(title = "Erster", content = "Erster Eintrag"))
+                    scope.launch {
+                        val id = viewModel.createDraft()
+                        onNavigateToEditor(id)
+                    }
                 },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             ) {
                 Icon(imageVector = Icons.Default.Create, contentDescription = null)
             }
         }) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .padding(innerPadding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+        Surface(
+            modifier = Modifier.padding(innerPadding),
+            color = MaterialTheme.colorScheme.surface,     // oder surfaceContainer
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            tonalElevation = 0.dp                          // erhöhe für stärkere Abhebung
         ) {
-            items(entries) { entry ->
-                JournalEntryItem(entry = entry, onCLick = {
-                    onNavigateToEditor(entry.id)
-                }, onLongClick = {
-                    chosenEntry = entry
+            LazyColumn(
+                modifier = Modifier
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                items(entries) { entry ->
+                    JournalEntryItem(entry = entry, onCLick = {
+                        onNavigateToEditor(entry.id)
+                    }, onLongClick = {
+                        chosenEntry = entry
+                    })
+                }
+            }
+            if (chosenEntry != null) {
+                EntryAlertDialog(onDismissRequest = { chosenEntry = null }, onConfirmation = {
+                    viewModel.delete(chosenEntry!!)
+                    chosenEntry = null
                 })
             }
-        }
-        if (chosenEntry != null) {
-            EntryAlertDialog(onDismissRequest = { chosenEntry = null }, onConfirmation = {
-                viewModel.delete(chosenEntry!!)
-                chosenEntry = null
-            })
         }
     }
 }
@@ -94,17 +109,21 @@ fun JournalEntryItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .combinedClickable(onClick = { onCLick() }, onLongClick = { onLongClick() })
+            .combinedClickable(onClick = { onCLick() }, onLongClick = { onLongClick() }),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = entry.title, style = MaterialTheme.typography.titleMedium)
             Text(
-                text = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(
+                text = SimpleDateFormat("HH:mm, dd.MM.yyyy", Locale.getDefault()).format(
                     Date(entry.timestamp)
                 ),
                 style = MaterialTheme.typography.bodySmall
             )
-            Text(text = entry.content, style = MaterialTheme.typography.bodyMedium)
+            Text(text = entry.content, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
         }
     }
 }

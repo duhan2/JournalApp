@@ -25,6 +25,9 @@ class JournalEntryViewModel(private val repository: JournalEntryRepository) : Vi
         repository.insert(entry)
     }
 
+    // Function to create a new draft entry
+    suspend fun createDraft(): Int = repository.createDraft()
+
     fun update(entry: JournalEntry) = viewModelScope.launch(Dispatchers.IO) {
         repository.update(entry)
     }

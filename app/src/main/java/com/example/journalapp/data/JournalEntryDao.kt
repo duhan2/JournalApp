@@ -12,14 +12,20 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface JournalEntryDao {
 
-    @Query("SELECT * FROM journal_entries ORDER BY timestamp DESC")
+    @Query(
+        """
+SELECT * FROM journal_entries
+WHERE title != '' OR content != ''
+ORDER BY timestamp DESC
+"""
+    )
     fun getEntries(): Flow<List<JournalEntry>>
 
     @Query("SELECT * FROM journal_entries WHERE id = :id")
     fun getEntry(id: Int): Flow<JournalEntry>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(entry: JournalEntry)
+    suspend fun insert(entry: JournalEntry): Long
 
     @Update
     suspend fun update(entry: JournalEntry)

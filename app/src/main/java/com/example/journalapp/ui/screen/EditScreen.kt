@@ -13,8 +13,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -52,6 +55,20 @@ fun EditScreen(viewModel: JournalEntryViewModel, entryId: Int, onNavigateBack: (
     val latestTitle by rememberUpdatedState(title)
     val latestContent by rememberUpdatedState(content)
 
+    val colors = TextFieldDefaults.colors(
+        focusedContainerColor = MaterialTheme.colorScheme.surface,
+        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+        focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+        unfocusedIndicatorColor = MaterialTheme.colorScheme.outline,
+        cursorColor = MaterialTheme.colorScheme.primary,
+        focusedLabelColor = MaterialTheme.colorScheme.primary,
+        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        errorIndicatorColor = MaterialTheme.colorScheme.error,
+        errorContainerColor = MaterialTheme.colorScheme.errorContainer,
+        errorLabelColor = MaterialTheme.colorScheme.onErrorContainer
+    )
+
     //Tippen wird nicht überschrieben dadurch
     LaunchedEffect(entry?.id) {
         if (!prefilled && entry != null) {
@@ -73,28 +90,53 @@ fun EditScreen(viewModel: JournalEntryViewModel, entryId: Int, onNavigateBack: (
                     .distinctUntilChanged()      // nur echte Änderungen
                     .collectLatest { (t, c) ->
                         val current = entry ?: return@collectLatest
-                        // Timestamp bleibt unverändert; nur Title/Content werden gespeichert
-                        viewModel.upsert(current.copy(title = t, content = c))
+                        // NUR speichern, wenn sich etwas geändert hat
+                        if (t != current.title || c != current.content) {
+                            viewModel.upsert(
+                                current.copy(
+                                    title = t,
+                                    content = c,
+                                    timestamp = System.currentTimeMillis()
+                                )
+                            )
+                        }
                     }
             }
     }
     //So wird beim Verlassen (z. B. Back-Button in der TopAppBar) ein letzter Save ausgelöst, falls gerade noch getippt wurde.
     DisposableEffect(entryId) {
         onDispose {
-            val current = entry
-            if (current != null) {
-                viewModel.upsert(current.copy(title = latestTitle, content = latestContent))
+            val e = entry
+            if (e != null) {
+                if (latestTitle.isBlank() && latestContent.isBlank()) {
+                    viewModel.delete(e)
+                } else if (latestTitle != e.title || latestContent != e.content) {
+                    viewModel.upsert(
+                        e.copy(
+                            title = latestTitle,
+                            content = latestContent,
+                            timestamp = System.currentTimeMillis()
+                        )
+                    )
+                }
             }
         }
     }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface,
+        containerColor = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
         topBar = {
             TopAppBar(
                 title = { Text(if (entryId == -1) "Add Entry" else "Edit Entry") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface, // „resting“
+                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer, // on scroll
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                ),
                 navigationIcon = {
                     IconButton(onClick = { onNavigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
@@ -102,35 +144,43 @@ fun EditScreen(viewModel: JournalEntryViewModel, entryId: Int, onNavigateBack: (
                 })
         }
     ) { innerPadding ->
-
-        Column(
-            modifier = Modifier
-                .padding(innerPadding)
-                .padding(16.dp)
-                .fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+        Surface( // Screen-Section
+            modifier = Modifier.padding(innerPadding),
+            color = MaterialTheme.colorScheme.surface,     // oder surfaceContainer
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            tonalElevation = 0.dp                          // erhöhe für stärkere Abhebung
         ) {
-            if (!prefilled && entry == null) {
-                Text("Lade Eintrag …")
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                if (!prefilled && entry == null) {
+                    Text("Lade Eintrag …")
+                }
+                val ts = entry?.timestamp ?: System.currentTimeMillis()
+                Text(
+                    text = "zuletzt geändert um " + SimpleDateFormat("HH:mm", Locale.getDefault())
+                        .format(Date(ts)) + " Uhr"
+                )
+                OutlinedTextField(
+                    label = { Text("Title") },
+                    value = title,
+                    colors = colors,
+                    onValueChange = { title = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = content,
+                    onValueChange = { content = it },
+                    label = { Text("Content") },
+                    colors = colors,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
-            Text(text = entry?.id.toString())
-            OutlinedTextField(
-                label = { Text("Title") },
-                value = title,
-                onValueChange = { title = it },
-                modifier = Modifier.fillMaxWidth()
-            )
-            val ts = entry?.timestamp ?: System.currentTimeMillis()
-            Text(
-                text = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-                    .format(Date(ts))
-            )
-            OutlinedTextField(
-                value = content,
-                onValueChange = { content = it },
-                label = { Text("Content") },
-                modifier = Modifier.fillMaxWidth()
-            )
         }
     }
 }
