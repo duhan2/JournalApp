@@ -41,6 +41,17 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/**
+ * A composable screen for editing a journal entry.
+ *
+ * This screen allows the user to edit the title and content of a journal entry.
+ * It features an auto-save mechanism that updates the entry after a short delay of inactivity.
+ * It also handles the creation of new entries and the deletion of empty entries.
+ *
+ * @param viewModel The [JournalEntryViewModel] for interacting with the data layer.
+ * @param entryId The ID of the journal entry to be edited. If it's a new entry, this might be a special value (e.g., 0).
+ * @param onNavigateBack A lambda function to be called when the user navigates back.
+ */
 @OptIn(FlowPreview::class, ExperimentalMaterial3Api::class)
 @Composable
 fun EditScreen(viewModel: JournalEntryViewModel, entryId: Int, onNavigateBack: () -> Boolean) {
@@ -69,7 +80,7 @@ fun EditScreen(viewModel: JournalEntryViewModel, entryId: Int, onNavigateBack: (
         errorLabelColor = MaterialTheme.colorScheme.onErrorContainer
     )
 
-    //Tippen wird nicht überschrieben dadurch
+    // Populates the text fields once the entry data is loaded.
     LaunchedEffect(entry?.id) {
         if (!prefilled && entry != null) {
             title = entry!!.title
@@ -78,32 +89,30 @@ fun EditScreen(viewModel: JournalEntryViewModel, entryId: Int, onNavigateBack: (
         }
     }
 
-    // === Autosave ===
+    // Auto-saves the entry after a 500ms debounce period.
     LaunchedEffect(entryId, prefilled) {
-        // Warte bis die ursprünglichen Werte einmal in die Textfelder übernommen wurden
         snapshotFlow { prefilled }
             .dropWhile { !it }
             .collectLatest {
-                // Ab jetzt Eingaben beobachten und speichern
                 snapshotFlow { title to content }
-                    .debounce(500)               // 0,5s nach der letzten Eingabe
-                    .distinctUntilChanged()      // nur echte Änderungen
+                    .debounce(500)
+                    .distinctUntilChanged()
                     .collectLatest { (t, c) ->
                         val current = entry ?: return@collectLatest
-                        // NUR speichern, wenn sich etwas geändert hat
                         if (t != current.title || c != current.content) {
                             viewModel.upsert(
                                 current.copy(
                                     title = t,
                                     content = c,
-                                    timestamp = System.currentTimeMillis()
                                 )
                             )
                         }
                     }
             }
     }
-    //So wird beim Verlassen (z. B. Back-Button in der TopAppBar) ein letzter Save ausgelöst, falls gerade noch getippt wurde.
+
+    // Cleans up the entry when the user navigates away.
+    // Deletes the entry if it's empty, otherwise saves the latest changes.
     DisposableEffect(entryId) {
         onDispose {
             val e = entry
@@ -115,7 +124,6 @@ fun EditScreen(viewModel: JournalEntryViewModel, entryId: Int, onNavigateBack: (
                         e.copy(
                             title = latestTitle,
                             content = latestContent,
-                            timestamp = System.currentTimeMillis()
                         )
                     )
                 }
@@ -131,8 +139,8 @@ fun EditScreen(viewModel: JournalEntryViewModel, entryId: Int, onNavigateBack: (
             TopAppBar(
                 title = { Text(if (entryId == -1) "Add Entry" else "Edit Entry") },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface, // „resting“
-                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer, // on scroll
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                     titleContentColor = MaterialTheme.colorScheme.onSurface,
                     navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
                     actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -146,9 +154,9 @@ fun EditScreen(viewModel: JournalEntryViewModel, entryId: Int, onNavigateBack: (
     ) { innerPadding ->
         Surface( // Screen-Section
             modifier = Modifier.padding(innerPadding),
-            color = MaterialTheme.colorScheme.surface,     // oder surfaceContainer
+            color = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.onSurface,
-            tonalElevation = 0.dp                          // erhöhe für stärkere Abhebung
+            tonalElevation = 0.dp
         ) {
             Column(
                 modifier = Modifier
@@ -157,12 +165,12 @@ fun EditScreen(viewModel: JournalEntryViewModel, entryId: Int, onNavigateBack: (
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 if (!prefilled && entry == null) {
-                    Text("Lade Eintrag …")
+                    Text("Loading Entry …")
                 }
-                val ts = entry?.timestamp ?: System.currentTimeMillis()
+                val ts = System.currentTimeMillis()
                 Text(
-                    text = "zuletzt geändert um " + SimpleDateFormat("HH:mm", Locale.getDefault())
-                        .format(Date(ts)) + " Uhr"
+                    text = "last change at " + SimpleDateFormat("HH:mm", Locale.getDefault())
+                        .format(Date(ts))
                 )
                 OutlinedTextField(
                     label = { Text("Title") },

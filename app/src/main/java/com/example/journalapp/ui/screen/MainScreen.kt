@@ -1,6 +1,5 @@
 package com.example.journalapp.ui.screen
 
-import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -31,7 +30,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.journalapp.data.JournalEntry
 import com.example.journalapp.data.JournalEntryViewModel
@@ -40,6 +38,16 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/**
+ * The main screen of the application, displaying a list of journal entries.
+ *
+ * This screen shows a list of all journal entries and includes a floating action button (FAB)
+ * to create a new entry. Tapping on an entry navigates to the [EditScreen] for that entry.
+ * A long press on an entry opens a dialog to confirm its deletion.
+ *
+ * @param viewModel The [JournalEntryViewModel] for accessing and managing journal entry data.
+ * @param onNavigateToEditor A callback function to navigate to the editor screen, passing the entry ID.
+ */
 @Composable
 fun MainScreen(viewModel: JournalEntryViewModel, onNavigateToEditor: (Int) -> Unit) {
 
@@ -54,7 +62,6 @@ fun MainScreen(viewModel: JournalEntryViewModel, onNavigateToEditor: (Int) -> Un
         containerColor = MaterialTheme.colorScheme.background,
         contentColor = MaterialTheme.colorScheme.onBackground,
         floatingActionButton = {
-            val context = LocalContext.current
             FloatingActionButton(
                 shape = CircleShape,
                 onClick = {
@@ -71,9 +78,9 @@ fun MainScreen(viewModel: JournalEntryViewModel, onNavigateToEditor: (Int) -> Un
         }) { innerPadding ->
         Surface(
             modifier = Modifier.padding(innerPadding),
-            color = MaterialTheme.colorScheme.surface,     // oder surfaceContainer
+            color = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.onSurface,
-            tonalElevation = 0.dp                          // erhöhe für stärkere Abhebung
+            tonalElevation = 0.dp
         ) {
             LazyColumn(
                 modifier = Modifier
@@ -98,6 +105,15 @@ fun MainScreen(viewModel: JournalEntryViewModel, onNavigateToEditor: (Int) -> Un
     }
 }
 
+/**
+ * A composable that displays a single journal entry as a card.
+ *
+ * This item is clickable to open the entry and supports a long click to initiate a delete action.
+ *
+ * @param entry The [JournalEntry] to display.
+ * @param onCLick The callback function to be invoked when the item is clicked.
+ * @param onLongClick The callback function to be invoked when the item is long-clicked.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun JournalEntryItem(
@@ -118,7 +134,7 @@ fun JournalEntryItem(
             Text(text = entry.title, style = MaterialTheme.typography.titleMedium)
             Text(
                 text = SimpleDateFormat("HH:mm, dd.MM.yyyy", Locale.getDefault()).format(
-                    Date(entry.timestamp)
+                    Date()
                 ),
                 style = MaterialTheme.typography.bodySmall
             )
@@ -127,14 +143,20 @@ fun JournalEntryItem(
     }
 }
 
+/**
+ * An alert dialog for confirming the deletion of a journal entry.
+ *
+ * @param onDismissRequest The callback function to be invoked when the dialog is dismissed.
+ * @param onConfirmation The callback function to be invoked when the user confirms the deletion.
+ */
 @Composable
 fun EntryAlertDialog(
     onDismissRequest: () -> Unit,
     onConfirmation: () -> Unit
 ) {
     AlertDialog(
-        title = { Text(text = "Eintrag Löschen ?") },
-        text = { Text(text = "Sicher, dass Sie den Eintrag löschen wollen ?") },
+        title = { Text(text = "Delete entry ?") },
+        text = { Text(text = "This action cannot be undone.") },
         onDismissRequest = { onDismissRequest() },
         confirmButton = {
             TextButton(
@@ -142,7 +164,7 @@ fun EntryAlertDialog(
                     onConfirmation()
                 }
             ) {
-                Text("Bestätigen")
+                Text("Confirm")
             }
         },
         dismissButton = {
@@ -151,7 +173,7 @@ fun EntryAlertDialog(
                     onDismissRequest()
                 }
             ) {
-                Text("Abbrechen")
+                Text("Cancel")
             }
         }
     )

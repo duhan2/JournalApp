@@ -2,32 +2,74 @@ package com.example.journalapp.data
 
 import kotlinx.coroutines.flow.Flow
 
+/**
+ * Repository for accessing journal entry data.
+ *
+ * This class provides a clean API for data access to the rest of the application.
+ * It abstracts the data sources (in this case, the Room database) from the rest of the app.
+ *
+ * @param journalEntryDao The Data Access Object for journal entries.
+ */
 class JournalEntryRepository(private val journalEntryDao: JournalEntryDao) {
 
-    val allEntries: Flow<List<JournalEntry>> = journalEntryDao.getEntries()
+    /**
+     * A flow that emits a list of all journal entries.
+     */
+    val allEntries: Flow<List<JournalEntry>> = journalEntryDao.getAll()
 
-    fun getById(id: Int): Flow<JournalEntry> {
-        return journalEntryDao.getEntry(id = id)
+    /**
+     * Retrieves a single journal entry by its ID.
+     *
+     * @param id The ID of the journal entry to retrieve.
+     * @return A flow emitting the [JournalEntry] or null if not found.
+     */
+    fun getById(id: Int): Flow<JournalEntry?> {
+        return journalEntryDao.getById(id)
     }
 
-    suspend fun insert(journalEntry: JournalEntry): Int {
-        return journalEntryDao.insert(journalEntry).toInt()
+    /**
+     * Inserts a new journal entry.
+     *
+     * @param entry The [JournalEntry] to insert.
+     */
+    suspend fun insert(entry: JournalEntry) {
+        journalEntryDao.insert(entry)
     }
-    //Erschaffe leeren Eintrag
+
+    /**
+     * Updates an existing journal entry.
+     *
+     * @param entry The [JournalEntry] to update.
+     */
+    suspend fun update(entry: JournalEntry) {
+        journalEntryDao.update(entry)
+    }
+
+    /**
+     * Deletes a journal entry.
+     *
+     * @param entry The [JournalEntry] to delete.
+     */
+    suspend fun delete(entry: JournalEntry) {
+        journalEntryDao.delete(entry)
+    }
+
+    /**
+     * Inserts or updates a journal entry.
+     *
+     * @param entry The [JournalEntry] to upsert.
+     */
+    suspend fun upsert(entry: JournalEntry) {
+        journalEntryDao.upsert(entry)
+    }
+
+    /**
+     * Creates a new draft journal entry.
+     *
+     * @return The ID of the newly created draft entry.
+     */
     suspend fun createDraft(): Int {
-        return insert(JournalEntry(title = "", content = ""))
-    }
-
-    suspend fun update(journalEntry: JournalEntry) {
-        journalEntryDao.update(journalEntry)
-    }
-
-    suspend fun delete(journalEntry: JournalEntry) {
-        journalEntryDao.delete(journalEntry)
-    }
-
-    suspend fun upsert(journalEntry: JournalEntry) {
-        journalEntryDao.upsert(journalEntry)
+        return journalEntryDao.createDraft()
     }
 
 }
