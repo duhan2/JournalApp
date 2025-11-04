@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -18,24 +19,22 @@ class JournalEntryViewModel(private val repository: JournalEntryRepository) : Vi
         initialValue = emptyList()
     )
 
-    fun getEntryById(entryId: Int): StateFlow<JournalEntry?> {
-        return repository.getById(entryId).stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = null
-        )
-    }
+    fun getEntryById(entryId: Int) = repository.getById(entryId)
 
-    fun insert(entry: JournalEntry) = viewModelScope.launch {
+    fun insert(entry: JournalEntry) = viewModelScope.launch(Dispatchers.IO) {
         repository.insert(entry)
     }
 
-    fun update(entry: JournalEntry) = viewModelScope.launch {
+    fun update(entry: JournalEntry) = viewModelScope.launch(Dispatchers.IO) {
         repository.update(entry)
     }
 
-    fun delete(entry: JournalEntry) = viewModelScope.launch {
+    fun delete(entry: JournalEntry) = viewModelScope.launch(Dispatchers.IO) {
         repository.delete(entry)
+    }
+
+    fun upsert(entry: JournalEntry) = viewModelScope.launch(Dispatchers.IO) {
+        repository.upsert(entry)
     }
 
 }

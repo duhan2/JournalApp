@@ -6,6 +6,10 @@ class JournalEntryRepository(private val journalEntryDao: JournalEntryDao) {
 
     val allEntries: Flow<List<JournalEntry>> = journalEntryDao.getEntries()
 
+    fun getById(id: Int): Flow<JournalEntry> {
+        return journalEntryDao.getEntry(id = id)
+    }
+
     suspend fun insert(journalEntry: JournalEntry) {
         journalEntryDao.insert(journalEntry)
     }
@@ -18,8 +22,8 @@ class JournalEntryRepository(private val journalEntryDao: JournalEntryDao) {
         journalEntryDao.delete(journalEntry)
     }
 
-    fun getById(id: Int): Flow<JournalEntry> {
-        return journalEntryDao.getEntry(id = id)
+    suspend fun upsert(journalEntry: JournalEntry) {
+        journalEntryDao.upsert(journalEntry)
     }
 
 }

@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -25,4 +26,7 @@ interface JournalEntryDao {
 
     @Delete
     suspend fun delete(entry: JournalEntry)
+
+    @Upsert
+    suspend fun upsert(entry: JournalEntry)
 }

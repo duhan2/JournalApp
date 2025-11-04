@@ -1,6 +1,8 @@
 package com.example.journalapp.ui.screen
 
 import android.widget.Toast
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,6 +26,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -34,10 +37,11 @@ import java.util.Date
 import java.util.Locale
 
 @Composable
-fun MainScreen(viewModel: JournalEntryViewModel) {
+fun MainScreen(viewModel: JournalEntryViewModel, onNavigateToEditor: (Int) -> Unit) {
 
     val entries by viewModel.entries.collectAsState(emptyList())
-    val openAlertDialog by remember { mutableStateOf(false) }
+
+    var chosenEntry by remember { mutableStateOf<JournalEntry?>(null) }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -64,17 +68,33 @@ fun MainScreen(viewModel: JournalEntryViewModel) {
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             items(entries) { entry ->
-                JournalEntryItem(entry = entry)
+                JournalEntryItem(entry = entry, onCLick = {
+                    onNavigateToEditor(entry.id)
+                }, onLongClick = {
+                    chosenEntry = entry
+                })
             }
+        }
+        if (chosenEntry != null) {
+            EntryAlertDialog(onDismissRequest = { chosenEntry = null }, onConfirmation = {
+                viewModel.delete(chosenEntry!!)
+                chosenEntry = null
+            })
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun JournalEntryItem(entry: JournalEntry) {
+fun JournalEntryItem(
+    entry: JournalEntry,
+    onCLick: () -> Unit,
+    onLongClick: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .combinedClickable(onClick = { onCLick() }, onLongClick = { onLongClick() })
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = entry.title, style = MaterialTheme.typography.titleMedium)
