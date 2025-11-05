@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * ViewModel for managing journal entries.
@@ -41,25 +42,19 @@ class JournalEntryViewModel(
      * @param entryId The ID of the journal entry to retrieve.
      * @return A flow emitting the [JournalEntry] or null if not found.
      */
-    fun getEntryById(entryId: Int) = repository.getById(entryId)
+    fun getEntryById(entryId: Long) = repository.getById(entryId)
 
     /**
-     * Inserts a new journal entry into the database.
+     * Inserts a new journal entry into the database and returns its new ID.
      * The operation is performed on the [ioDispatcher].
      *
      * @param entry The [JournalEntry] to insert.
+     * @return The ID of the newly inserted entry.
      */
-    fun insert(entry: JournalEntry) = viewModelScope.launch(ioDispatcher) {
+    suspend fun insert(entry: JournalEntry): Long = withContext(ioDispatcher){
         repository.insert(entry)
     }
 
-    /**
-     * Creates a new draft journal entry.
-     * This function is a suspending function and will call the repository's createDraft method.
-     *
-     * @return The ID of the newly created draft entry.
-     */
-    suspend fun createDraft(): Int = repository.createDraft()
 
     /**
      * Updates an existing journal entry in the database.

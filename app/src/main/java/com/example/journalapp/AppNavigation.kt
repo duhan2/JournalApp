@@ -28,9 +28,9 @@ fun AppNavigation(navController: NavHostController, viewModel: JournalEntryViewM
             })
         }
         composable(route = "edit/{id}", arguments = listOf(navArgument("id") {
-            type = NavType.IntType
+            type = NavType.LongType
         })) { backStackEntry ->
-            val id = backStackEntry.arguments?.getInt("id") ?: 0
+            val id = backStackEntry.arguments?.getLong("id") ?: 0.toLong()
             EditScreen(
                 viewModel = viewModel,
                 entryId = id,

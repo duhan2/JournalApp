@@ -9,12 +9,12 @@ plugins {
 
 android {
     namespace = "com.example.journalapp"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.journalapp"
         minSdk = 34
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
@@ -47,7 +47,10 @@ android {
         unitTests.isReturnDefaultValues = true
         unitTests.isIncludeAndroidResources = true
     }
+
 }
+
+
 
 dependencies {
 
@@ -59,10 +62,12 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.livedata.ktx)
     implementation(libs.androidx.compose.runtime.livedata)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.compose.ui.test.junit4)
     testImplementation(libs.junit)
     testImplementation(libs.junit.jupiter)
     androidTestImplementation(libs.androidx.junit)
@@ -74,7 +79,6 @@ dependencies {
 
     // Room
     implementation(libs.androidx.room.runtime)
-    debugImplementation(libs.androidx.compose.ui.test.manifest)
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.room.ktx)
 
@@ -87,7 +91,9 @@ dependencies {
     testImplementation(libs.androidx.navigation.testing)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
-    testImplementation(libs.androidx.ui.test.junit4)
-
+    // Unit-Tests
+    testImplementation("app.cash.turbine:turbine:1.2.1")
+    testImplementation("org.robolectric:robolectric:4.11.1")
+// oder aktueller
 
 }

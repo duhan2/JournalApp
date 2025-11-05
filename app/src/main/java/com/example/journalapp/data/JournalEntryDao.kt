@@ -15,13 +15,12 @@ import kotlinx.coroutines.flow.Flow
  */
 @Dao
 interface JournalEntryDao {
-
     /**
      * Retrieves all journal entries from the database, ordered by their ID in descending order.
      *
      * @return A [Flow] of a list of [JournalEntry] objects.
      */
-    @Query("SELECT * FROM journal_entries ORDER BY id DESC")
+    @Query("SELECT * FROM journal_entries ORDER BY date DESC")
     fun getAll(): Flow<List<JournalEntry>>
 
     /**
@@ -31,7 +30,7 @@ interface JournalEntryDao {
      * @return A [Flow] of the [JournalEntry] or null if not found.
      */
     @Query("SELECT * FROM journal_entries WHERE id = :id")
-    fun getById(id: Int): Flow<JournalEntry?>
+    fun getById(id: Long): Flow<JournalEntry?>
 
     /**
      * Inserts a new journal entry into the database.
@@ -39,7 +38,7 @@ interface JournalEntryDao {
      * @param entry The [JournalEntry] to insert.
      */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(entry: JournalEntry)
+    suspend fun insert(entry: JournalEntry): Long
 
     /**
      * Updates an existing journal entry in the database.
@@ -64,23 +63,11 @@ interface JournalEntryDao {
      * @param entry The [JournalEntry] to upsert.
      */
     suspend fun upsert(entry: JournalEntry) {
-        if (entry.id == 0) {
+        if (entry.id == 0.toLong()) {
             insert(entry)
         } else {
             update(entry)
         }
-    }
-
-    /**
-     * Creates a new draft journal entry with default title and content.
-     *
-     * @return The ID of the newly created draft entry.
-     */
-    suspend fun createDraft(): Int {
-        val draft = JournalEntry(title = "New Entry", content = "", isDraft = true)
-        insert(draft)
-        //This is not ideal, but for the sake of simplicity we will assume the last inserted id is the one we just inserted
-        return getLastInsertedId()?.id ?: 0
     }
 
     /**

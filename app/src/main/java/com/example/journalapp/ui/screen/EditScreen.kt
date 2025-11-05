@@ -54,13 +54,14 @@ import java.util.Locale
  */
 @OptIn(FlowPreview::class, ExperimentalMaterial3Api::class)
 @Composable
-fun EditScreen(viewModel: JournalEntryViewModel, entryId: Int, onNavigateBack: () -> Boolean) {
+fun EditScreen(viewModel: JournalEntryViewModel, entryId: Long, onNavigateBack: () -> Boolean) {
 
     val entryFlow = remember(entryId) { viewModel.getEntryById(entryId) }
     val entry by entryFlow.collectAsState(initial = null)
 
     var title by rememberSaveable(entryId) { mutableStateOf(entry?.title.orEmpty()) }
     var content by rememberSaveable(entryId) { mutableStateOf(entry?.content.orEmpty()) }
+
     var prefilled by remember(entryId) { mutableStateOf(false) }
 
     val latestTitle by rememberUpdatedState(title)
@@ -104,6 +105,7 @@ fun EditScreen(viewModel: JournalEntryViewModel, entryId: Int, onNavigateBack: (
                                 current.copy(
                                     title = t,
                                     content = c,
+                                    date = System.currentTimeMillis()
                                 )
                             )
                         }
@@ -137,7 +139,7 @@ fun EditScreen(viewModel: JournalEntryViewModel, entryId: Int, onNavigateBack: (
         contentColor = MaterialTheme.colorScheme.onBackground,
         topBar = {
             TopAppBar(
-                title = { Text(if (entryId == -1) "Add Entry" else "Edit Entry") },
+                title = { Text(if (entry?.title == "" && entry!!.content == "") "Add Entry" else "Edit Entry") },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
@@ -147,7 +149,10 @@ fun EditScreen(viewModel: JournalEntryViewModel, entryId: Int, onNavigateBack: (
                 ),
                 navigationIcon = {
                     IconButton(onClick = { onNavigateBack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
                     }
                 })
         }
@@ -167,11 +172,13 @@ fun EditScreen(viewModel: JournalEntryViewModel, entryId: Int, onNavigateBack: (
                 if (!prefilled && entry == null) {
                     Text("Loading Entry …")
                 }
-                val ts = System.currentTimeMillis()
-                Text(
-                    text = "last change at " + SimpleDateFormat("HH:mm", Locale.getDefault())
-                        .format(Date(ts))
-                )
+                val ts = entry?.date
+                if (ts != null) {
+                    Text(
+                        text = "last change at " + SimpleDateFormat("HH:mm", Locale.getDefault())
+                            .format(Date(ts))
+                    )
+                }
                 OutlinedTextField(
                     label = { Text("Title") },
                     value = title,

@@ -1,154 +1,145 @@
 package com.example.journalapp.data
 
-import androidx.arch.core.executor.testing.InstantTaskExecutorRule
-import kotlinx.coroutines.Dispatchers
+import app.cash.turbine.test
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.TestDispatcher
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Before
+import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TestWatcher
-import org.junit.runner.Description
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
-
 
 /**
- * A JUnit TestWatcher that swaps the main coroutine dispatcher with a test dispatcher.
- * This rule allows tests to control the execution of coroutines that use `Dispatchers.Main`.
+ * Unit tests for the [JournalEntryViewModel].
  *
- * @param testDispatcher The [TestDispatcher] to use as the main dispatcher. Defaults to [UnconfinedTestDispatcher].
+ * This class tests the various functions of the ViewModel, ensuring that the data is handled
+ * correctly and that the UI state is updated as expected.
  */
-@ExperimentalCoroutinesApi
-class MainDispatcherRule(
-    val testDispatcher: TestDispatcher = UnconfinedTestDispatcher()
-) : TestWatcher() {
-    /**
-     * Replaces the main dispatcher with the [testDispatcher] before the test starts.
-     */
-    override fun starting(description: Description) {
-        Dispatchers.setMain(testDispatcher)
-    }
-
-    /**
-     * Resets the main dispatcher to its original state after the test finishes.
-     */
-    override fun finished(description: Description) {
-        Dispatchers.resetMain()
-    }
-}
-
-/**
- * Test suite for [JournalEntryViewModel].
- *
- * This class contains unit tests for the various functions of the [JournalEntryViewModel],
- * ensuring that it interacts correctly with the [JournalEntryRepository].
- */
-@ExperimentalCoroutinesApi
+@OptIn(ExperimentalCoroutinesApi::class)
 class JournalEntryViewModelTest {
 
-    // This rule swaps the background executor used by the Architecture Components with a different one which executes each task synchronously.
-    @get:Rule
-    val instantTaskExecutorRule = InstantTaskExecutorRule()
-
-    // This rule handles setting and resetting the main coroutine dispatcher for tests.
+    /**
+     * A JUnit rule that swaps the main coroutine dispatcher with a test dispatcher.
+     */
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
-    private lateinit var viewModel: JournalEntryViewModel
-    private lateinit var repository: JournalEntryRepository
-    private val testEntries = listOf(JournalEntry(1, "Test Title", "Test Content"))
-    private val testEntry = JournalEntry(1, "Test Title", "Test Content")
-
     /**
-     * Sets up the test environment before each test.
-     * This involves mocking the repository, defining its behavior, and initializing the ViewModel.
+     * Creates a new instance of the [JournalEntryViewModel] for testing.
+     *
+     * @return A new [JournalEntryViewModel] instance with a [FakeJournalEntryDao] and a test dispatcher.
      */
-    @Before
-    fun setup() {
-
-        repository = mock()
-
-        // Whenever allEntries is accessed on the repository, return a flow containing our test entries.
-        whenever(repository.allEntries).thenReturn(flowOf(testEntries))
-
-        // Initialize the ViewModel with the mock repository and the test dispatcher.
-        viewModel = JournalEntryViewModel(repository, mainDispatcherRule.testDispatcher)
+    private fun vm(): JournalEntryViewModel {
+        val dao = FakeJournalEntryDao()
+        val repo = JournalEntryRepository(dao)
+        return JournalEntryViewModel(repo, mainDispatcherRule.dispatcher)
     }
 
     /**
-     * Tests that the ViewModel correctly retrieves all journal entries from the repository.
+     * Tests that the `entries` StateFlow correctly reflects the data from the repository,
+     * sorted by date in descending order.
      */
     @Test
-    fun `test get all entries`() = runTest {
-        val expectedEntries = testEntries
+    fun entries_emits_from_repository() = runTest {
+        val vm = vm()
+        vm.entries.test {
+            // Initially empty
+            assertEquals(emptyList<JournalEntry>(), awaitItem())
 
-        // Collect the first non-empty list from the entries flow.
-        val actualEntries = viewModel.entries.first { it.isNotEmpty() }
+            val e1 = JournalEntry(title = "A", content = "a", date = 1000L)
+            val e2 = JournalEntry(title = "B", content = "b", date = 2000L)
+            vm.upsert(e1); vm.upsert(e2); advanceUntilIdle()
 
-        // Assert that the collected entries match the expected entries.
-        assertEquals(expectedEntries, actualEntries)
+            val list = awaitItem()
+            assertEquals(listOf(e2.copy(id = 2), e1.copy(id = 1)), list)
+            cancelAndIgnoreRemainingEvents()
+        }
     }
 
     /**
-     * Tests that the `insert` function on the ViewModel correctly calls the repository's `insert` method.
+     * Tests that `getEntryById` retrieves the correct journal entry.
      */
     @Test
-    fun `test insert entry`() = runTest {
-        viewModel.insert(testEntry)
-        // Verify that the insert method was called on the repository with the test entry.
-        verify(repository).insert(testEntry)
+    fun getEntryById_emits_correct_item() = runTest {
+        val vm = vm()
+        val id = vm.insert(JournalEntry(title = "Note", content = "X"))
+        vm.getEntryById(id).test {
+            val item = awaitItem()
+            assertEquals("Note", item?.title)
+            cancelAndIgnoreRemainingEvents()
+        }
     }
 
     /**
-     * Tests that the `update` function on the ViewModel correctly calls the repository's `update` method.
+     * Tests that `insert` returns the new ID and persists the entry.
      */
     @Test
-    fun `test update entry`() = runTest {
-        viewModel.update(testEntry)
-        // Verify that the update method was called on the repository with the test entry.
-        verify(repository).update(testEntry)
+    fun insert_returns_id_and_persists() = runTest {
+        val vm = vm()
+        val id = vm.insert(JournalEntry(title = "New", content = "Body"))
+        assertEquals(1L, id)
+        vm.getEntryById(id).test {
+            assertEquals("New", awaitItem()?.title)
+            cancelAndIgnoreRemainingEvents()
+        }
     }
 
     /**
-     * Tests that the `delete` function on the ViewModel correctly calls the repository's `delete` method.
+     * Tests that `update` modifies an existing entry.
      */
     @Test
-    fun `test delete entry`() = runTest {
-        viewModel.delete(testEntry)
-        // Verify that the delete method was called on the repository with the test entry.
-        verify(repository).delete(testEntry)
+    fun update_modifies_entry() = runTest {
+        val vm = vm()
+        val id = vm.insert(JournalEntry(title = "Old", content = "Body"))
+        vm.update(JournalEntry(id = id, title = "Updated", content = "Body+", date = 9999L))
+        advanceUntilIdle()
+        vm.getEntryById(id).test {
+            assertEquals("Updated", awaitItem()?.title)
+            cancelAndIgnoreRemainingEvents()
+        }
     }
 
     /**
-     * Tests that the `upsert` function on the ViewModel correctly calls the repository's `upsert` method.
+     * Tests that `delete` removes an entry from the database.
      */
     @Test
-    fun `test upsert entry`() = runTest {
-        viewModel.upsert(testEntry)
-        // Verify that the upsert method was called on the repository with the test entry.
-        verify(repository).upsert(testEntry)
+    fun delete_removes_entry() = runTest {
+        val vm = vm()
+        val id = vm.insert(JournalEntry(title = "Tmp", content = "X"))
+        vm.delete(JournalEntry(id = id))
+        advanceUntilIdle()
+        vm.getEntryById(id).test {
+            assertNull(awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
     }
 
     /**
-     * Tests that the `createDraft` function on the ViewModel correctly calls the repository's `createDraft` method
-     * and returns the expected result.
+     * Tests that `upsert` inserts a new entry if the ID is 0, and updates an existing one otherwise.
      */
     @Test
-    fun `test create draft`() = runTest {
-        // Define the behavior of the mock repository's createDraft method.
-        whenever(repository.createDraft()).thenReturn(1)
-        val result = viewModel.createDraft()
-        // Assert that the result from the ViewModel matches the expected result.
-        assertEquals(1, result)
+    fun upsert_inserts_then_updates() = runTest {
+        val vm = vm()
+        vm.entries.test {
+            // 1) Initially empty
+            assertEquals(emptyList<JournalEntry>(), awaitItem())
+
+            // 2) upsert with id==0 -> Insert
+            vm.upsert(JournalEntry(title = "First", content = "")) // returns Job
+            advanceUntilIdle()
+            val afterInsert = awaitItem()
+            val created = afterInsert.first()  // now NOT empty
+
+            // 3) upsert with existing id -> Update
+            vm.upsert(created.copy(title = "Second"))
+            advanceUntilIdle()
+            val afterUpdate = awaitItem()
+
+            assertEquals(
+                "Second",
+                afterUpdate.first { it.id == created.id }.title
+            )
+            cancelAndIgnoreRemainingEvents()
+        }
     }
 }

@@ -23,7 +23,7 @@ class JournalEntryRepository(private val journalEntryDao: JournalEntryDao) {
      * @param id The ID of the journal entry to retrieve.
      * @return A flow emitting the [JournalEntry] or null if not found.
      */
-    fun getById(id: Int): Flow<JournalEntry?> {
+    fun getById(id: Long): Flow<JournalEntry?> {
         return journalEntryDao.getById(id)
     }
 
@@ -32,8 +32,8 @@ class JournalEntryRepository(private val journalEntryDao: JournalEntryDao) {
      *
      * @param entry The [JournalEntry] to insert.
      */
-    suspend fun insert(entry: JournalEntry) {
-        journalEntryDao.insert(entry)
+    suspend fun insert(entry: JournalEntry): Long {
+        return journalEntryDao.insert(entry)
     }
 
     /**
@@ -61,15 +61,6 @@ class JournalEntryRepository(private val journalEntryDao: JournalEntryDao) {
      */
     suspend fun upsert(entry: JournalEntry) {
         journalEntryDao.upsert(entry)
-    }
-
-    /**
-     * Creates a new draft journal entry.
-     *
-     * @return The ID of the newly created draft entry.
-     */
-    suspend fun createDraft(): Int {
-        return journalEntryDao.createDraft()
     }
 
 }

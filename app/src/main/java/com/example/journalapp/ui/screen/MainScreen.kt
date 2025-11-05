@@ -49,7 +49,7 @@ import java.util.Locale
  * @param onNavigateToEditor A callback function to navigate to the editor screen, passing the entry ID.
  */
 @Composable
-fun MainScreen(viewModel: JournalEntryViewModel, onNavigateToEditor: (Int) -> Unit) {
+fun MainScreen(viewModel: JournalEntryViewModel, onNavigateToEditor: (Long) -> Unit) {
 
     val entries by viewModel.entries.collectAsState(emptyList())
 
@@ -66,7 +66,7 @@ fun MainScreen(viewModel: JournalEntryViewModel, onNavigateToEditor: (Int) -> Un
                 shape = CircleShape,
                 onClick = {
                     scope.launch {
-                        val id = viewModel.createDraft()
+                        val id = viewModel.insert(JournalEntry())
                         onNavigateToEditor(id)
                     }
                 },
@@ -134,7 +134,7 @@ fun JournalEntryItem(
             Text(text = entry.title, style = MaterialTheme.typography.titleMedium)
             Text(
                 text = SimpleDateFormat("HH:mm, dd.MM.yyyy", Locale.getDefault()).format(
-                    Date()
+                    Date(entry.date)
                 ),
                 style = MaterialTheme.typography.bodySmall
             )
